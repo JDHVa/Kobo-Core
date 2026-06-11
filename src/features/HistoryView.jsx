@@ -18,6 +18,20 @@ export function HistoryView({ transactions }) {
   const [filter, setFilter] = useState('');
 
   const openLoans = useMemo(() => computeOpenLoans(transactions), [transactions]);
+
+  // Exporta el historial completo a CSV (compatible con Excel)
+  const exportCsv = () => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      ['Fecha', 'Tipo', 'Herramienta', 'Cantidad', 'Persona', 'Nota'],
+      ...transactions.map(tx => [new Date(tx.ts).toLocaleString(), (TX_META[tx.type] || TX_META.ajuste).label, tx.toolName, tx.qty, tx.person || '', tx.note || '']),
+    ];
+    const csv = '﻿' + rows.map(r => r.map(esc).join(',')).join('\r\n'); // BOM para acentos en Excel
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: `historial-taller-${new Date().toISOString().slice(0,10)}.csv` });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!q) return transactions;
@@ -34,11 +48,19 @@ export function HistoryView({ transactions }) {
             <p className="text-xs text-ink-mute">Quién tiene qué y todo el historial de movimientos</p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+        {transactions.length > 0 && (
+          <button onClick={exportCsv} title="Descargar historial en CSV (Excel)"
+            className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-3 py-2 text-sm font-medium text-ink-soft shadow-soft transition hover:bg-steel-50">
+            <Icon name="file-down" size={15}/> <span className="hidden sm:inline">CSV</span>
+          </button>
+        )}
         <div className="flex gap-1 rounded-xl border border-steel-200 bg-steel-50 p-1">
           <button onClick={() => setTab('loans')} className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${tab==='loans' ? 'bg-white text-ink shadow-soft' : 'text-ink-mute'}`}>
             Fuera ahora {openLoans.length > 0 && <span className="ml-1 rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-white">{openLoans.length}</span>}
           </button>
           <button onClick={() => setTab('log')} className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${tab==='log' ? 'bg-white text-ink shadow-soft' : 'text-ink-mute'}`}>Historial</button>
+        </div>
         </div>
       </div>
 

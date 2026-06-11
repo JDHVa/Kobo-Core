@@ -115,6 +115,20 @@ export const dbAdjustTool = (tool, delta) => run('adjustTool', { row: toolToRow(
 // Reintenta todo lo pendiente (se llama al reconectar / iniciar sesión)
 export const dbFlushQueue = () => sb ? flushQueue(EXECUTORS) : Promise.resolve(0);
 
+/* ── Perfiles y roles ── */
+export async function dbFetchProfile(userId) {
+  if (!sb || !userId) return null;
+  const { data } = await sb.from('profiles').select('*').eq('id', userId).maybeSingle();
+  return data;
+}
+export async function dbFetchTeamMembers() {
+  if (!sb) return [];
+  const { data } = await byTeam(sb.from('profiles').select('*')).order('created_at');
+  return data || [];
+}
+export const dbSetMemberRole = (userId, role) =>
+  sb ? sb.from('profiles').update({ role }).eq('id', userId) : Promise.resolve({ error: new Error('Sin conexión') });
+
 /* ── Auth ── */
 export const authSignIn = (email, password) => sb.auth.signInWithPassword({ email, password });
 export const authSignUp = (email, password, metadata = {}) => sb.auth.signUp({ email, password, options: { data: metadata } });

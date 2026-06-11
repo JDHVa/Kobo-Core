@@ -15,6 +15,7 @@ import { CycleCountView } from './features/CycleCountView';
 import { TableView } from './features/TableView';
 import { QrSheet } from './features/QrSheet';
 import { AuthGate } from './features/AuthGate';
+import { TeamPanel } from './features/TeamPanel';
 import { ChatPanel } from './features/ChatPanel';
 import { CATEGORIES, getDrawerLabel } from './constants';
 import { migrateContainers, migrateTools } from './lib/storage';
@@ -59,6 +60,7 @@ export default function App() {
   const [confirmFurniture, setConfirmFurniture] = useState(null);
   const [checkout, setCheckout] = useState(null); // { tool, mode }
   const [chatOpen, setChatOpen] = useState(false);
+  const [teamOpen, setTeamOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   // SW solo en producción: en dev cachea los módulos y sirve código viejo
@@ -83,6 +85,10 @@ export default function App() {
   }, [tools.length]);
 
   const fireToast = (message, type) => { setToast({ message, type }); setTimeout(() => setToast(null), 2200); };
+
+  // Acciones reservadas al admin (el servidor lo refuerza con RLS)
+  const requireAdmin = (fn) => (...args) =>
+    inv.isAdmin ? fn(...args) : fireToast('Solo un admin del taller puede hacer esto', 'take');
 
   const openLoans = useMemo(() => computeOpenLoans(transactions), [transactions]);
   const lowStockCount = useMemo(() => tools.filter(belowMin).length, [tools]);
@@ -229,7 +235,7 @@ export default function App() {
               <button onClick={exportData} className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-3 py-2 text-sm font-medium text-ink-soft shadow-soft transition hover:bg-steel-50" title="Exportar inventario">
                 <Icon name="download" size={16}/> <span className="hidden md:inline">Exportar</span>
               </button>
-              <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-3 py-2 text-sm font-medium text-ink-soft shadow-soft transition hover:bg-steel-50" title="Importar inventario">
+              <button onClick={requireAdmin(() => fileInputRef.current?.click())} className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-3 py-2 text-sm font-medium text-ink-soft shadow-soft transition hover:bg-steel-50" title="Importar inventario">
                 <Icon name="upload" size={16}/> <span className="hidden md:inline">Importar</span>
               </button>
               <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={importData}/>
@@ -238,6 +244,12 @@ export default function App() {
               className="flex items-center gap-2 rounded-xl bg-steel-800 px-3.5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-steel-900 active:scale-95">
               <Icon name="plus" size={18}/> <span className="hidden sm:inline">Nueva herramienta</span><span className="sm:hidden">Nueva</span>
             </button>
+            {sb && inv.session && (
+              <button onClick={() => setTeamOpen(true)} title="Equipo del taller"
+                className="grid h-9 w-9 place-items-center rounded-xl border border-steel-200 bg-white text-ink-mute shadow-soft transition hover:bg-steel-50 hover:text-steel-700">
+                <Icon name="users" size={16}/>
+              </button>
+            )}
             {sb && inv.session && (
               <button onClick={() => authSignOut()} title={`Cerrar sesión (${inv.session.user.email})`}
                 className="grid h-9 w-9 place-items-center rounded-xl border border-steel-200 bg-white text-ink-mute shadow-soft transition hover:bg-steel-50 hover:text-clay-600">
@@ -295,7 +307,7 @@ export default function App() {
                       {searchResults.map(t => (
                         <div key={t.id}>
                           <p className="mb-1.5 flex items-center gap-1 px-1 text-xs text-ink-mute"><Icon name="map-pin" size={12}/> {containerName(t.container)} · {drawerNameOf(t)}</p>
-                          <ToolCard tool={t} loans={loansByTool(openLoans, t.id)} onCheckout={(tool, mode) => setCheckout({ tool, mode })} onEdit={editTool} onDelete={setConfirm} onSetStatus={inv.setToolStatus}/>
+                          <ToolCard tool={t} loans={loansByTool(openLoans, t.id)} onCheckout={(tool, mode) => setCheckout({ tool, mode })} onEdit={editTool} onDelete={requireAdmin(setConfirm)} onSetStatus={inv.setToolStatus}/>
                         </div>
                       ))}
                     </div>
@@ -310,7 +322,7 @@ export default function App() {
                         <button onClick={() => setShowMap(m => !m)} className="flex items-center gap-2 text-sm font-semibold text-steel-700">
                           <Icon name={showMap ? 'chevron-down' : 'chevron-right'} size={16}/> {showMap ? 'Ocultar' : 'Mostrar'} mapa
                         </button>
-                        {showMap && (
+                        {showMap && inv.isAdmin && (
                           <button onClick={() => setMapEditMode(m => !m)}
                             className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${mapEditMode ? 'bg-amber-500 text-white shadow-soft' : 'border border-steel-200 bg-white text-steel-600 shadow-soft hover:bg-steel-50'}`}>
                             <Icon name={mapEditMode ? 'check' : 'pencil'} size={15}/> {mapEditMode ? 'Listo' : 'Editar mapa'}
@@ -338,13 +350,13 @@ export default function App() {
                 {view === 'container' && activeContainer && (
                   <ContainerView container={activeContainer} tools={tools} trail={trail} onJump={jumpTo}
                     onOpenDrawer={i => openDrawer(activeContainer, i)} onBack={goWorkshop}
-                    onEditDrawers={() => setDrawerEditor(activeContainer)}/>
+                    onEditDrawers={requireAdmin(() => setDrawerEditor(activeContainer))}/>
                 )}
                 {view === 'drawer' && activeContainer && (
                   <DrawerView container={activeContainer} drawerIndex={activeDrawer} tools={drawerTools} openLoans={openLoans}
                     trail={trail} onJump={jumpTo} onChangeDrawer={setActiveDrawer}
                     onCheckout={(tool, mode) => setCheckout({ tool, mode })}
-                    onEdit={editTool} onDelete={setConfirm} onSetStatus={inv.setToolStatus}
+                    onEdit={editTool} onDelete={requireAdmin(setConfirm)} onSetStatus={inv.setToolStatus}
                     onAddHere={() => { setEditing(null); setModalOpen(true); }}
                     onBack={() => setView('container')}/>
                 )}
@@ -356,10 +368,10 @@ export default function App() {
         {tab === 'tabla' && <TableView tools={tools} containers={containers} onEdit={editTool}
           deletedTools={deletedTools}
           onRestore={t => { inv.restoreTool(t); fireToast('Herramienta restaurada', 'add'); }}
-          onPurge={t => { inv.purgeTool(t); fireToast('Eliminada definitivamente', 'info'); }}/>}
+          onPurge={requireAdmin(t => { inv.purgeTool(t); fireToast('Eliminada definitivamente', 'info'); })}/>}
         {tab === 'historia' && <HistoryView transactions={transactions}/>}
         {tab === 'reponer' && <ReorderPanel tools={tools} containerName={containerName}/>}
-        {tab === 'kits' && <KitsView kits={kits} tools={tools} onSaveKit={k => { inv.saveKit(k); fireToast('Kit guardado', 'info'); }} onDeleteKit={id => { inv.deleteKit(id); fireToast('Kit eliminado', 'info'); }}/>}
+        {tab === 'kits' && <KitsView kits={kits} tools={tools} onSaveKit={k => { inv.saveKit(k); fireToast('Kit guardado', 'info'); }} onDeleteKit={requireAdmin(id => { inv.deleteKit(id); fireToast('Kit eliminado', 'info'); })}/>}
         {tab === 'auditoria' && <CycleCountView containers={containers} tools={tools} transactions={transactions}
           onApplyCount={inv.applyCount} onRecordAudit={inv.recordAudit} auditor={defaultPerson}/>}
         {tab === 'qr' && <QrSheet tools={tools} containers={containers}/>}
@@ -380,6 +392,9 @@ export default function App() {
         onClose={() => setDrawerEditor(null)} onSave={handleSaveDrawers}/>
       <CheckoutModal open={!!checkout} mode={checkout?.mode} tool={checkout?.tool ? tools.find(t => t.id === checkout.tool.id) : null}
         defaultPerson={defaultPerson} onClose={() => setCheckout(null)} onConfirm={handleCheckoutConfirm}/>
+
+      <TeamPanel open={teamOpen} onClose={() => setTeamOpen(false)} isAdmin={inv.isAdmin}
+        myId={inv.session?.user?.id} onToast={fireToast}/>
 
       {/* Chat LLM */}
       <button onClick={() => setChatOpen(o => !o)}

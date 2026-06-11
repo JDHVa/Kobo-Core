@@ -4,7 +4,7 @@ import { uid, clamp } from '../lib/utils';
 import {
   sb, dbFetchAll, dbSeedFromLocal, dbUpsertContainer, dbUpsertTool, dbHardDeleteTool,
   dbDeleteContainer, dbUpsertIcon, dbInsertTx, dbUpsertKit, dbDeleteKit, dbAdjustTool,
-  dbFlushQueue, authGetSession, authOnChange, setDbTeam,
+  dbFlushQueue, authGetSession, authOnChange, setDbTeam, dbFetchProfile,
   rowToContainer, rowToTool, rowToIcon, rowToTx, rowToKit,
 } from '../lib/db';
 import { queueSize, onQueueChange } from '../lib/offlineQueue';
@@ -20,6 +20,7 @@ export function useInventory() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(!sb);
   const [pendingOps, setPendingOps] = useState(queueSize());
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => { saveState(state); }, [state]);
 
@@ -49,6 +50,7 @@ export function useInventory() {
     if (!sb || !session) return; // sin sb, dbLoading ya inicia en false
     setStorageTeam(team);
     setDbTeam(team);
+    dbFetchProfile(session.user.id).then(setProfile);
     (async () => {
       setDbLoading(true);
       const local = loadState(); // caché propio del taller (vacío si es nuevo)
@@ -235,8 +237,12 @@ export function useInventory() {
     }
   }, []);
 
+  // Si el perfil aún no carga (o no existe la tabla), se asume admin para
+  // no bloquear al equipo; el servidor (RLS) es quien manda de verdad.
+  const isAdmin = profile ? profile.role === 'admin' : true;
+
   return {
-    state, dbConnected, dbLoading, session, authReady, pendingOps,
+    state, dbConnected, dbLoading, session, authReady, pendingOps, profile, isAdmin,
     recordMovement, saveTool, deleteTool, restoreTool, purgeTool, recordAudit, setToolStatus, applyCount,
     updateContainer, commitContainer, saveContainer, removeContainer, saveDrawers,
     saveKit, deleteKit, importState,
