@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Icon, fieldCls, lblCls } from '../components/ui';
 import { authSignIn, authSignUp } from '../lib/db';
 import { MASTER_KEYS } from '../config';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon, QtyStepper, ModalShell, fieldCls, lblCls, btnGhost } from '../ui';
 import { loadRecentPeople } from '../../lib/storage';
 

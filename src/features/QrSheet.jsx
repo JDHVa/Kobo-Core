@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import { Icon, EmptyState } from '../components/ui';
 import { getDrawerLabel } from '../constants';

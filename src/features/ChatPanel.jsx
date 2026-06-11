@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Icon } from '../components/ui';
 import { CONTAINER_META, getDrawerLabel, TOOL_STATUS } from '../constants';
 import { GEMINI_API_KEY, GEMINI_MODEL } from '../config';

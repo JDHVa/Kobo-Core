@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Icon, ToolIconDisplay, EmptyState, ModalShell, fieldCls, lblCls, btnPrimary, btnGhost } from '../components/ui';
 import { uid } from '../lib/utils';
 
@@ -9,7 +9,7 @@ function KitModal({ open, onClose, onSave, editing, tools }) {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       setName(editing?.name || '');
       setDescription(editing?.description || '');

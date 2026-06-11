@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon, QtyStepper, ModalShell, fieldCls, lblCls, btnPrimary, btnGhost } from '../ui';
 import { CONTAINER_META, CUSTOM_SHAPES, FURNITURE_COLORS } from '../../constants';
 import { uid, snap, clamp } from '../../lib/utils';

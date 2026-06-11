@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon, ToolIconDisplay, ModalShell, fieldCls, lblCls, btnPrimary, btnGhost } from '../ui';
 import { CATEGORIES, CONTAINER_META, getDrawerLabel } from '../../constants';
 import { TOOL_ICON_LIBRARY } from '../../constants/toolIcons';

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useInventory } from './hooks/useInventory';
 import { Icon, MetricCard, EmptyState, Toast, ConfirmDialog } from './components/ui';
 import { ToolCard } from './components/ToolCard';

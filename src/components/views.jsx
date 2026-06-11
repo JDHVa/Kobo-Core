@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Icon, BreadcrumbNav, EmptyState } from './ui';
 import { ToolCard } from './ToolCard';
 import { CONTAINER_META, ACCENT_BG, ACCENT_PILL, DRAWER_TONE, getDrawerLabel } from '../constants';

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Icon, EmptyState } from '../components/ui';
 import { fmtDate } from '../lib/utils';
 import { computeOpenLoans } from '../lib/loans';

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Icon, ToolIconDisplay, EmptyState } from '../components/ui';
 import { belowMin } from '../lib/utils';
 

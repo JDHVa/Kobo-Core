@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Icon, ToolIconDisplay, StatusBadge, StockBar } from './ui';
 import { TOOL_STATUS } from '../constants';
 import { belowMin } from '../lib/utils';

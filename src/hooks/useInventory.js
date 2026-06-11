@@ -46,7 +46,7 @@ export function useInventory() {
 
   // Carga inicial + seed seguro (requiere sesión por RLS)
   useEffect(() => {
-    if (!sb || !session) { if (!sb) setDbLoading(false); return; }
+    if (!sb || !session) return; // sin sb, dbLoading ya inicia en false
     setStorageTeam(team);
     setDbTeam(team);
     (async () => {

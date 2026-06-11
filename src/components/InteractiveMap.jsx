@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Icon } from './ui';
 import { CONTAINER_META, FURNITURE_COLORS } from '../constants';
 import { snap, clamp } from '../lib/utils';

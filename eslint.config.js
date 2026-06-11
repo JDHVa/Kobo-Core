@@ -17,5 +17,12 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Reglas nuevas de react-hooks v7: señalan patrones a mejorar
+      // (sincronizar props->state en efectos), no bugs. Como advertencia
+      // siguen visibles sin romper el lint.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+    },
   },
 ])

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Icon, ToolIconDisplay, EmptyState, fieldCls } from '../components/ui';
 import { getDrawerLabel } from '../constants';
 import { loadRecentPeople } from '../lib/storage';

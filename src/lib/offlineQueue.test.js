@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { enqueue, loadQueue, queueSize, flushQueue } from './offlineQueue';
+import { enqueue, queueSize, flushQueue } from './offlineQueue';
 
 // localStorage simulado para Node
 beforeEach(() => {

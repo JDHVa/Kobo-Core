@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon, ModalShell, btnPrimary, btnGhost } from '../ui';
 import { CONTAINER_META } from '../../constants';
 
