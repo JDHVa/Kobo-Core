@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Be Vietnam Pro", system-ui, sans-serif;
+
+  --color-ink: #27272a;
+  --color-ink-soft: #3f3f46;
+  --color-ink-mute: #71717a;
+
+  --color-steel-50: #f3f6fa;
+  --color-steel-100: #e5ecf4;
+  --color-steel-200: #c8d8e8;
+  --color-steel-300: #9db9d4;
+  --color-steel-400: #6b93bb;
+  --color-steel-500: #4775a0;
+  --color-steel-600: #345b82;
+  --color-steel-700: #2a4a6b;
+  --color-steel-800: #1e3a5f;
+  --color-steel-900: #1a2f4a;
+
+  --color-sage-50: #f3f7f3;
+  --color-sage-100: #e3ede2;
+  --color-sage-200: #c6dac4;
+  --color-sage-300: #9bbd98;
+  --color-sage-400: #6f9c6c;
+  --color-sage-500: #52804f;
+  --color-sage-600: #3f663d;
+
+  --color-clay-50: #fbf4ee;
+  --color-clay-100: #f6e6d8;
+  --color-clay-200: #ecc7a8;
+  --color-clay-300: #dfa074;
+  --color-clay-400: #cf7c47;
+  --color-clay-500: #bc602c;
+  --color-clay-600: #9c4d23;
+
+  --color-wood-100: #efe6da;
+  --color-wood-200: #e0d0bd;
+  --color-wood-300: #cdb595;
+  --color-wood-400: #b89a73;
+
+  --shadow-soft: 0 1px 2px rgba(39,39,42,0.04), 0 2px 8px rgba(39,39,42,0.06);
+  --shadow-lift: 0 4px 12px rgba(39,39,42,0.08), 0 12px 28px rgba(39,39,42,0.10);
+  --shadow-drawer: inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 20px rgba(30,58,95,0.14);
+
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.16,1,0.3,1) both;
+  --animate-scale-in: scale-in 0.4s cubic-bezier(0.16,1,0.3,1) both;
+  --animate-pop: pop 0.3s ease-out;
+
+  @keyframes fade-up { 0% { opacity:0; transform:translateY(10px); } 100% { opacity:1; transform:translateY(0); } }
+  @keyframes scale-in { 0% { opacity:0; transform:scale(0.96); } 100% { opacity:1; transform:scale(1); } }
+  @keyframes pop { 0% { transform:scale(1); } 50% { transform:scale(1.18); } 100% { transform:scale(1); } }
+}
+
+:root { color-scheme: light; }
+* { -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: #eef1f5; }
+body {
+  font-family: var(--font-sans);
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(71,117,160,0.05), transparent 40%),
+    radial-gradient(circle at 88% 8%, rgba(188,96,44,0.04), transparent 35%);
+  background-attachment: fixed;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c8d8e8; border-radius: 9999px; border: 2px solid #eef1f5; }
+::-webkit-scrollbar-thumb:hover { background: #9db9d4; }
+
+.wood-grain {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 40%),
+    repeating-linear-gradient(90deg, rgba(120,90,55,0.045) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #e8dcc8, #d9c6aa);
+}
+.metal-face {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0) 50%),
+    linear-gradient(180deg, #eef2f7, #d6e0ec);
+}
+.map-svg { touch-action: none; user-select: none; }
+.map-svg .furniture-group { transition: filter 0.15s; }
+.map-svg .furniture-group:hover { filter: brightness(1.03); }
+.map-svg .resize-handle { cursor: nwse-resize; }
+.map-svg .resize-handle-ne, .map-svg .resize-handle-sw { cursor: nesw-resize; }
