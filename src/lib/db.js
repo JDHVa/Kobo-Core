@@ -31,11 +31,13 @@ export const rowToTool = (r) => ({
 export const containerToRow = (c) => ({
   id:c.id, type:c.type, name:c.name, drawers:c.drawers,
   drawer_names:c.drawerNames||[], x:c.x, y:c.y, w:c.w, h:c.h, z:c.z||0, shape:c.shape||'rect',
+  rotation:c.rotation||0,
   team:currentTeam,
 });
 export const rowToContainer = (r) => ({
   id:r.id, type:r.type, name:r.name, drawers:r.drawers,
   drawerNames:r.drawer_names||[], x:r.x, y:r.y, w:r.w, h:r.h, z:r.z||0, shape:r.shape||'rect',
+  rotation:r.rotation||0,
 });
 export const iconToRow = (i) => ({ id:i.id, url:i.url, label:i.label||'', team:currentTeam });
 export const rowToIcon = (r) => ({ id:r.id, url:r.url, label:r.label||'' });

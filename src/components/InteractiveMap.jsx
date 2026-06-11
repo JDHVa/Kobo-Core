@@ -149,6 +149,16 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
     return [...byZ.filter(c => c.id !== selectedId), ...byZ.filter(c => c.id === selectedId)];
   }, [containers, selectedId]);
 
+  // Rota el mueble seleccionado en pasos de 90°
+  const rotateSelected = () => {
+    if (!selectedId) return;
+    const c = containers.find(c => c.id === selectedId);
+    if (!c) return;
+    const rotation = ((c.rotation || 0) + 90) % 360;
+    onUpdateContainer(selectedId, { rotation });
+    if (onCommitContainer) onCommitContainer({ ...c, rotation });
+  };
+
   const restack = (dir) => {
     if (!selectedId) return;
     const z = dir === 'front'
@@ -177,6 +187,9 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
               </button>
               {selectedId && (
                 <>
+                  <button onClick={rotateSelected} className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-2.5 py-2 text-sm font-semibold text-steel-700 shadow-soft transition hover:bg-steel-50 active:scale-95" title="Rotar 90°">
+                    <Icon name="rotate-cw" size={15}/> <span className="hidden lg:inline">Rotar</span>
+                  </button>
                   <button onClick={() => restack('front')} className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-2.5 py-2 text-sm font-semibold text-steel-700 shadow-soft transition hover:bg-steel-50 active:scale-95" title="Traer al frente">
                     <Icon name="arrow-up-to-line" size={15}/> <span className="hidden lg:inline">Frente</span>
                   </button>
@@ -224,8 +237,10 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
                 onClick={e => handleClick(e, c)}
                 onPointerDown={e => handlePointerDown(e, c.id, 'move')}>
                 {isSel && editMode && <rect x={c.x-3} y={c.y-3} width={c.w+6} height={c.h+6} rx={11} fill="none" stroke="#345b82" strokeWidth={2} strokeDasharray="6 3" opacity={0.6}/>}
-                {renderShape(c, colors)}
-                {renderDecoration(c, colors)}
+                <g transform={c.rotation ? `rotate(${c.rotation} ${c.x + c.w/2} ${c.y + c.h/2})` : undefined}>
+                  {renderShape(c, colors)}
+                  {renderDecoration(c, colors)}
+                </g>
                 <text x={c.x + c.w/2} y={c.y - 8} textAnchor="middle" fontSize={13} fontWeight={600} fill="#27272a" style={{pointerEvents:'none'}}>{c.name}</text>
                 <text x={c.x + c.w/2} y={c.y + c.h + 18} textAnchor="middle" fontSize={11} fill="#71717a" style={{pointerEvents:'none'}}>{st.count} herr.</text>
                 {st.missing > 0 && (

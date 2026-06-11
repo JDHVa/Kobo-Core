@@ -19,7 +19,7 @@ export function migrateContainers(containers) {
     return {
       ...c, drawerNames: names,
       x: c.x ?? 100, y: c.y ?? 100, w: c.w ?? 170, h: c.h ?? 120,
-      z: c.z ?? 0, shape: c.shape || 'rect',
+      z: c.z ?? 0, shape: c.shape || 'rect', rotation: c.rotation ?? 0,
     };
   });
 }
