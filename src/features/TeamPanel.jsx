@@ -33,8 +33,8 @@ export function TeamPanel({ open, onClose, isAdmin, myId, onToast }) {
   };
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Equipo del taller">
-      <div className="space-y-2">
+    <ModalShell open={open} onClose={onClose} title="Equipo del taller" icon="users">
+      <div className="space-y-2 p-5">
         {loading && <p className="py-6 text-center text-sm text-ink-mute">Cargando miembros…</p>}
         {!loading && members.length === 0 && (
           <p className="py-6 text-center text-sm text-ink-mute">
@@ -68,9 +68,10 @@ export function TeamPanel({ open, onClose, isAdmin, myId, onToast }) {
           </div>
         ))}
         {isAdmin && members.length > 0 && (
-          <p className="pt-1 text-xs text-ink-mute">
-            Los <strong>miembros</strong> pueden agregar materiales y retirar/devolver. Solo los <strong>admin</strong> pueden editar el mapa, eliminar y gestionar roles.
-          </p>
+          <div className="mt-2 flex items-start gap-2 rounded-xl bg-steel-100 px-3.5 py-2.5 text-xs leading-relaxed text-ink-soft">
+            <Icon name="info" size={14} className="mt-0.5 shrink-0 text-steel-500"/>
+            <p>Los <strong>miembros</strong> pueden agregar materiales y retirar/devolver. Solo los <strong>admin</strong> pueden editar el mapa, eliminar y gestionar roles.</p>
+          </div>
         )}
       </div>
     </ModalShell>

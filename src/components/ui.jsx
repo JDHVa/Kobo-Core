@@ -3,7 +3,7 @@ import * as Lucide from 'lucide-react';
 import { TOOL_ICON_LIBRARY } from '../constants/toolIcons';
 import { statusOf } from '../lib/utils';
 
-const pascal = (name) => name.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+const pascal = (name) => (name || '').split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
 
 export function Icon({ name, size = 20, className = '', strokeWidth = 2 }) {
   const Cmp = Lucide[pascal(name)] || Lucide.Circle;
