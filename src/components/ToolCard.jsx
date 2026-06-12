@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon, ToolIconDisplay, StatusBadge, StockBar } from './ui';
+import { Icon, ToolIconDisplay, StatusBadge, StockBar, Lightbox } from './ui';
 import { TOOL_STATUS } from '../constants';
 import { belowMin } from '../lib/utils';
 
@@ -10,6 +10,7 @@ const STATUS_TONE = {
 
 export function ToolCard({ tool, loans = [], onCheckout, onEdit, onDelete, onSetStatus }) {
   const [statusMenu, setStatusMenu] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const st = TOOL_STATUS[tool.status || 'ok'];
   const blocked = tool.status && tool.status !== 'ok';
 
@@ -17,7 +18,12 @@ export function ToolCard({ tool, loans = [], onCheckout, onEdit, onDelete, onSet
     <div className={`group relative flex flex-col rounded-2xl border bg-white p-4 shadow-soft transition hover:shadow-lift animate-fade-up ${belowMin(tool) ? 'border-clay-300' : 'border-steel-200'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-3 min-w-0">
-          {(tool.icon || tool.iconUrl) && (
+          {tool.photo && (
+            <button onClick={() => setPhotoOpen(true)} title="Ver foto" className="mt-1 shrink-0">
+              <img src={tool.photo} className="h-12 w-12 rounded-xl border border-steel-200 object-cover transition hover:scale-105"/>
+            </button>
+          )}
+          {!tool.photo && (tool.icon || tool.iconUrl) && (
             <span className="mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-steel-50 text-steel-600">
               <ToolIconDisplay icon={tool.icon} iconUrl={tool.iconUrl} size={24}/>
             </span>
@@ -77,6 +83,7 @@ export function ToolCard({ tool, loans = [], onCheckout, onEdit, onDelete, onSet
         </button>
       </div>
       {blocked && <p className="mt-2 text-[11px] text-ink-mute">Retiros bloqueados: herramienta {st.label.toLowerCase()}.</p>}
+      {photoOpen && <Lightbox src={tool.photo} alt={tool.name} onClose={() => setPhotoOpen(false)}/>}
     </div>
   );
 }

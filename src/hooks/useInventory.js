@@ -5,8 +5,10 @@ import {
   sb, dbFetchAll, dbSeedFromLocal, dbUpsertContainer, dbUpsertTool, dbHardDeleteTool,
   dbDeleteContainer, dbUpsertIcon, dbInsertTx, dbUpsertKit, dbDeleteKit, dbAdjustTool,
   dbFlushQueue, authGetSession, authOnChange, setDbTeam, dbFetchProfile,
-  rowToContainer, rowToTool, rowToIcon, rowToTx, rowToKit,
+  dbUpsertWish, dbDeleteWish, dbFetchMapSettings, dbSaveMapSettings,
+  rowToContainer, rowToTool, rowToIcon, rowToTx, rowToKit, rowToWish,
 } from '../lib/db';
+import { DEFAULT_ENTRANCE } from '../constants';
 import { queueSize, onQueueChange } from '../lib/offlineQueue';
 
 // upsert genérico inmutable por id
@@ -21,6 +23,7 @@ export function useInventory() {
   const [authReady, setAuthReady] = useState(!sb);
   const [pendingOps, setPendingOps] = useState(queueSize());
   const [profile, setProfile] = useState(null);
+  const [entrance, setEntrance] = useState(DEFAULT_ENTRANCE);
 
   useEffect(() => { saveState(state); }, [state]);
 
@@ -51,6 +54,7 @@ export function useInventory() {
     setStorageTeam(team);
     setDbTeam(team);
     dbFetchProfile(session.user.id).then(setProfile);
+    dbFetchMapSettings().then(e => { if (e) setEntrance({ ...DEFAULT_ENTRANCE, ...e }); });
     (async () => {
       setDbLoading(true);
       const local = loadState(); // caché propio del taller (vacío si es nuevo)
@@ -81,6 +85,7 @@ export function useInventory() {
       .on('postgres_changes', { event:'*', schema:'public', table:'custom_icons' }, apply('customIcons', rowToIcon))
       .on('postgres_changes', { event:'*', schema:'public', table:'transactions' }, apply('transactions', rowToTx))
       .on('postgres_changes', { event:'*', schema:'public', table:'kits' }, apply('kits', rowToKit))
+      .on('postgres_changes', { event:'*', schema:'public', table:'wishlist' }, apply('wishlist', rowToWish))
       .subscribe((status) => setDbConnected(status === 'SUBSCRIBED'));
     return () => { sb.removeChannel(channel); };
   }, [session?.user?.id]);
@@ -226,6 +231,22 @@ export function useInventory() {
     setState(prev => ({ ...prev, kits: (prev.kits || []).filter(k => k.id !== id) }));
   }, []);
 
+  /* ── Materiales a futuro (wishlist) ── */
+  const saveWish = useCallback((wish) => {
+    dbUpsertWish(wish);
+    setState(prev => ({ ...prev, wishlist: mergeById(prev.wishlist || [], wish) }));
+  }, []);
+  const deleteWish = useCallback((id) => {
+    dbDeleteWish(id);
+    setState(prev => ({ ...prev, wishlist: (prev.wishlist || []).filter(w => w.id !== id) }));
+  }, []);
+
+  /* ── Entrada del taller en el mapa ── */
+  const saveEntrance = useCallback((e) => {
+    setEntrance(e);
+    dbSaveMapSettings(e);
+  }, []);
+
   /* ── Import / Export ── */
   const importState = useCallback((imported) => {
     setState(imported);
@@ -234,17 +255,20 @@ export function useInventory() {
       imported.tools.forEach(t => dbUpsertTool(t));
       (imported.customIcons || []).forEach(ic => dbUpsertIcon(ic));
       (imported.kits || []).forEach(k => dbUpsertKit(k));
+      (imported.wishlist || []).forEach(w => dbUpsertWish(w));
     }
   }, []);
 
   // Si el perfil aún no carga (o no existe la tabla), se asume admin para
   // no bloquear al equipo; el servidor (RLS) es quien manda de verdad.
   const isAdmin = profile ? profile.role === 'admin' : true;
+  // Visitante: solo lectura (RLS lo refuerza en el servidor)
+  const isVisitor = profile?.role === 'visitante';
 
   return {
-    state, dbConnected, dbLoading, session, authReady, pendingOps, profile, isAdmin,
+    state, dbConnected, dbLoading, session, authReady, pendingOps, profile, isAdmin, isVisitor,
     recordMovement, saveTool, deleteTool, restoreTool, purgeTool, recordAudit, setToolStatus, applyCount,
     updateContainer, commitContainer, saveContainer, removeContainer, saveDrawers,
-    saveKit, deleteKit, importState,
+    saveKit, deleteKit, saveWish, deleteWish, entrance, saveEntrance, importState,
   };
 }

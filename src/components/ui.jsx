@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import * as Lucide from 'lucide-react';
 import { TOOL_ICON_LIBRARY } from '../constants/toolIcons';
 import { statusOf } from '../lib/utils';
+import { dbUploadPhoto } from '../lib/db';
 
 const pascal = (name) => (name || '').split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
 
@@ -121,11 +122,19 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message }) {
   );
 }
 
-// Cáscara de modal compartida (header sticky + footer)
-export function ModalShell({ open, onClose, title, icon, subtitle, footer, children, maxW = 'max-w-lg' }) {
+// Cáscara de modal compartida (header sticky + footer).
+// onSubmit: si se pasa, Enter guarda (salvo en textareas, selects y botones).
+export function ModalShell({ open, onClose, title, icon, subtitle, footer, children, maxW = 'max-w-lg', onSubmit }) {
   if (!open) return null;
+  const handleKeyDown = (e) => {
+    if (e.key !== 'Enter' || !onSubmit) return;
+    const tag = e.target.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+    e.preventDefault();
+    onSubmit();
+  };
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose} onKeyDown={handleKeyDown}>
       <div className={`max-h-[92vh] w-full ${maxW} animate-scale-in overflow-y-auto rounded-t-3xl bg-steel-50 shadow-lift sm:rounded-3xl`} onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-steel-200 bg-steel-50/95 px-5 py-4 backdrop-blur">
           <div>
@@ -137,6 +146,61 @@ export function ModalShell({ open, onClose, title, icon, subtitle, footer, child
         {children}
         {footer && <div className="sticky bottom-0 flex gap-3 border-t border-steel-200 bg-steel-50/95 p-5 backdrop-blur">{footer}</div>}
       </div>
+    </div>
+  );
+}
+
+// Campo de foto: sube al bucket "fotos" de Supabase Storage y devuelve la URL
+export function PhotoField({ value, onChange, label = 'Foto (opcional)' }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const inputRef = useRef(null);
+
+  const pick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError(''); setUploading(true);
+    try { onChange(await dbUploadPhoto(file)); }
+    catch { setError('No se pudo subir la foto. Revisa tu conexión.'); }
+    setUploading(false);
+  };
+
+  return (
+    <div>
+      <label className={lblCls}>{label}</label>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={pick}/>
+      {value ? (
+        <div className="flex items-center gap-3">
+          <img src={value} className="h-20 w-20 rounded-xl border border-steel-200 object-cover"/>
+          <div className="flex flex-col gap-1.5">
+            <button onClick={() => inputRef.current?.click()} disabled={uploading} className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-steel-50 disabled:opacity-50">
+              <Icon name="image" size={13}/> Cambiar
+            </button>
+            <button onClick={() => onChange('')} className="flex items-center gap-1.5 rounded-xl border border-steel-200 bg-white px-3 py-1.5 text-xs font-semibold text-clay-600 transition hover:bg-clay-50">
+              <Icon name="x" size={13}/> Quitar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => inputRef.current?.click()} disabled={uploading}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-steel-200 bg-steel-50/50 py-3 text-sm font-semibold text-steel-600 transition hover:border-steel-300 hover:bg-steel-100 disabled:opacity-50">
+          <Icon name={uploading ? 'loader' : 'camera'} size={16} className={uploading ? 'animate-spin' : ''}/>
+          {uploading ? 'Subiendo...' : 'Subir foto'}
+        </button>
+      )}
+      {error && <p className="mt-1.5 text-xs text-clay-600">{error}</p>}
+    </div>
+  );
+}
+
+// Visor de foto a pantalla completa (clic en cualquier parte para cerrar)
+export function Lightbox({ src, alt = '', onClose }) {
+  if (!src) return null;
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/80 p-4 backdrop-blur-sm" onClick={onClose}>
+      <img src={src} alt={alt} className="max-h-[90vh] max-w-full animate-scale-in rounded-2xl object-contain shadow-lift"/>
+      <button onClick={onClose} className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25"><Icon name="x" size={22}/></button>
     </div>
   );
 }

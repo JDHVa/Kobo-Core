@@ -41,7 +41,7 @@ export function FurnitureModal({ open, onClose, onSave, editing }) {
   };
 
   return (
-    <ModalShell open={open} onClose={onClose}
+    <ModalShell open={open} onClose={onClose} onSubmit={submit}
       title={editing ? 'Editar mueble' : 'Agregar mueble'} icon={editing ? 'pencil' : 'plus-circle'}
       footer={<>
         <button onClick={onClose} className={`flex-1 ${btnGhost}`}>Cancelar</button>
@@ -89,7 +89,7 @@ export function FurnitureModal({ open, onClose, onSave, editing }) {
         )}
 
         <div>
-          <label className={lblCls}>{meta.drawerLabel}s ({meta.minD}-{meta.maxD})</label>
+          <label className={lblCls}>{meta.drawerLabel}s (sin límite)</label>
           <div className="flex items-center gap-3">
             <QtyStepper value={form.drawers} min={meta.minD} max={meta.maxD} onChange={v => set('drawers', v)}/>
             <span className="text-sm text-ink-mute">{form.drawers} {form.drawers === 1 ? meta.drawerLabel.toLowerCase() : (meta.drawerLabel.toLowerCase() + 's')}</span>

@@ -20,6 +20,7 @@ export const toolToRow = (t) => ({
   total:t.total, current_qty:t.current, container_id:t.container,
   drawer:t.drawer, icon:t.icon||'', icon_url:t.iconUrl||'', icon_label:t.iconLabel||'',
   min_stock:t.minStock||0, status:t.status||'ok', deleted_at:t.deletedAt||null,
+  photo_url:t.photo||'',
   team:currentTeam,
 });
 export const rowToTool = (r) => ({
@@ -27,6 +28,7 @@ export const rowToTool = (r) => ({
   total:r.total, current:r.current_qty, container:r.container_id,
   drawer:r.drawer, icon:r.icon||'', iconUrl:r.icon_url||'', iconLabel:r.icon_label||'',
   minStock:r.min_stock||0, status:r.status||'ok', deletedAt:r.deleted_at||null,
+  photo:r.photo_url||'',
 });
 export const containerToRow = (c) => ({
   id:c.id, type:c.type, name:c.name, drawers:c.drawers,
@@ -52,17 +54,26 @@ export const rowToTx = (r) => ({
 });
 export const kitToRow = (k) => ({ id:k.id, name:k.name, description:k.description||'', items:k.items||[], team:currentTeam });
 export const rowToKit = (r) => ({ id:r.id, name:r.name, description:r.description||'', items:r.items||[] });
+export const wishToRow = (w) => ({
+  id:w.id, name:w.name, price:w.price ?? null, qty:w.qty||1, url:w.url||'',
+  photo_url:w.photo||'', note:w.note||'', team:currentTeam,
+});
+export const rowToWish = (r) => ({
+  id:r.id, name:r.name, price:r.price ?? null, qty:r.qty||1, url:r.url||'',
+  photo:r.photo_url||'', note:r.note||'', createdAt:r.created_at,
+});
 
 /* ── Operaciones ── */
 export async function dbFetchAll() {
   if (!sb) return null;
   try {
-    const [cRes, tRes, iRes, txRes, kRes] = await Promise.all([
+    const [cRes, tRes, iRes, txRes, kRes, wRes] = await Promise.all([
       byTeam(sb.from('containers').select('*')),
       byTeam(sb.from('tools').select('*')),
       byTeam(sb.from('custom_icons').select('*')),
       byTeam(sb.from('transactions').select('*')).order('ts', { ascending:false }).limit(500),
       byTeam(sb.from('kits').select('*')),
+      byTeam(sb.from('wishlist').select('*')), // puede fallar si la tabla no existe aún
     ]);
     if (cRes.error || tRes.error) return null;
     return {
@@ -71,6 +82,7 @@ export async function dbFetchAll() {
       customIcons: (iRes.data || []).map(rowToIcon),
       transactions: (txRes.data || []).map(rowToTx),
       kits: (kRes.data || []).map(rowToKit),
+      wishlist: (wRes.data || []).map(rowToWish),
     };
   } catch { return null; }
 }
@@ -88,6 +100,9 @@ const EXECUTORS = {
   insertTx:        (row) => sb.from('transactions').insert(row).then(throwOnError),
   upsertKit:       (row) => sb.from('kits').upsert(row).then(throwOnError),
   deleteKit:       (id)  => sb.from('kits').delete().eq('id', id).then(throwOnError),
+  upsertWish:      (row) => sb.from('wishlist').upsert(row).then(throwOnError),
+  deleteWish:      (id)  => sb.from('wishlist').delete().eq('id', id).then(throwOnError),
+  upsertMapSettings: (row) => sb.from('map_settings').upsert(row).then(throwOnError),
   adjustTool:      async ({ row, delta }) => {
     const { error } = await sb.rpc('adjust_tool_qty', { p_tool_id: row.id, p_delta: delta });
     if (error) await sb.from('tools').upsert(row).then(throwOnError); // fallback no atómico
@@ -113,6 +128,39 @@ export const dbUpsertKit = (k) => run('upsertKit', kitToRow(k));
 export const dbDeleteKit = (id) => run('deleteKit', id);
 export const dbDeleteContainer = (id) => run('deleteContainer', id);
 export const dbAdjustTool = (tool, delta) => run('adjustTool', { row: toolToRow(tool), delta });
+export const dbUpsertWish = (w) => run('upsertWish', wishToRow(w));
+export const dbDeleteWish = (id) => run('deleteWish', id);
+export const dbSaveMapSettings = (entrance) =>
+  run('upsertMapSettings', { team: currentTeam, entrance, updated_at: new Date().toISOString() });
+
+export async function dbFetchMapSettings() {
+  if (!sb || !currentTeam) return null;
+  try {
+    const { data } = await sb.from('map_settings').select('entrance').eq('team', currentTeam).maybeSingle();
+    return data?.entrance || null;
+  } catch { return null; }
+}
+
+/* ── Fotos (Supabase Storage, bucket "fotos") ──
+   Redimensiona en el navegador antes de subir para no llenar el bucket. */
+async function compressImage(file, maxSize = 1000) {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.82));
+}
+
+export async function dbUploadPhoto(file) {
+  if (!sb) throw new Error('Sin conexión a la base de datos');
+  const blob = await compressImage(file).catch(() => file); // si falla la compresión, sube el original
+  const path = `${currentTeam || 'comun'}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const { error } = await sb.storage.from('fotos').upload(path, blob, { contentType: 'image/jpeg' });
+  if (error) throw error;
+  return sb.storage.from('fotos').getPublicUrl(path).data.publicUrl;
+}
 
 // Reintenta todo lo pendiente (se llama al reconectar / iniciar sesión)
 export const dbFlushQueue = () => sb ? flushQueue(EXECUTORS) : Promise.resolve(0);

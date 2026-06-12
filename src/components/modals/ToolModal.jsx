@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Icon, ToolIconDisplay, ModalShell, fieldCls, lblCls, btnPrimary, btnGhost } from '../ui';
+import { Icon, ToolIconDisplay, ModalShell, PhotoField, fieldCls, lblCls, btnPrimary, btnGhost } from '../ui';
 import { CATEGORIES, CONTAINER_META, getDrawerLabel } from '../../constants';
 import { TOOL_ICON_LIBRARY } from '../../constants/toolIcons';
 import { uid } from '../../lib/utils';
 
 export function ToolModal({ open, onClose, onSave, initial, containers, customIcons = [], defaultLocation }) {
-  const blank = { name:'', category:CATEGORIES[0], serial:'', total:1, current:1, minStock:0, status:'ok', container:containers[0]?.id || '', drawer:0, icon:'', iconUrl:'' };
+  const blank = { name:'', category:CATEGORIES[0], serial:'', total:1, current:1, minStock:0, status:'ok', container:containers[0]?.id || '', drawer:0, icon:'', iconUrl:'', photo:'' };
   const [form, setForm] = useState(blank);
   const [error, setError] = useState('');
   const [showIcons, setShowIcons] = useState(false);
@@ -45,7 +45,7 @@ export function ToolModal({ open, onClose, onSave, initial, containers, customIc
   };
 
   return (
-    <ModalShell open={open} onClose={onClose}
+    <ModalShell open={open} onClose={onClose} onSubmit={submit}
       title={initial ? 'Editar herramienta' : 'Registrar herramienta'}
       icon={initial ? 'pencil' : 'plus-circle'}
       footer={<>
@@ -80,6 +80,8 @@ export function ToolModal({ open, onClose, onSave, initial, containers, customIc
             </select>
           </div>
         </div>
+
+        <PhotoField value={form.photo || ''} onChange={url => set('photo', url)} label="Foto del componente (opcional, aparte del icono)"/>
 
         <div>
           <button onClick={() => setShowIcons(v => !v)} className="flex items-center gap-2 text-sm font-semibold text-steel-600 hover:text-steel-800">

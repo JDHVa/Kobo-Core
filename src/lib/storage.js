@@ -10,7 +10,7 @@ let currentTeam = null;
 export function setStorageTeam(team) { currentTeam = team || null; }
 const activeKey = () => currentTeam ? `${STORAGE_KEY}:${currentTeam}` : STORAGE_KEY;
 
-const emptyState = () => ({ containers: [], tools: [], customIcons: [], transactions: [], kits: [] });
+const emptyState = () => ({ containers: [], tools: [], customIcons: [], transactions: [], kits: [], wishlist: [] });
 
 export function migrateContainers(containers) {
   return containers.map(c => {
@@ -49,13 +49,14 @@ export function loadState() {
           customIcons: Array.isArray(parsed.customIcons) ? parsed.customIcons : [],
           transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
           kits: Array.isArray(parsed.kits) ? parsed.kits : [],
+          wishlist: Array.isArray(parsed.wishlist) ? parsed.wishlist : [],
         };
       }
     }
   } catch { /* corrupted storage -> seed */ }
   // Taller con sesión y sin caché: empieza vacío (sus datos reales vienen de la DB).
   if (currentTeam) return emptyState();
-  return { containers: DEFAULT_CONTAINERS, tools: migrateTools(SEED_TOOLS), customIcons: [], transactions: [], kits: [] };
+  return { containers: DEFAULT_CONTAINERS, tools: migrateTools(SEED_TOOLS), customIcons: [], transactions: [], kits: [], wishlist: [] };
 }
 
 export function saveState(state) {

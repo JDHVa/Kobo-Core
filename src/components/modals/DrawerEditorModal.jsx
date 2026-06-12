@@ -22,13 +22,13 @@ export function DrawerEditorModal({ open, container, toolCounts, onClose, onSave
     setRows(prev => { const n = prev.slice(); const [item] = n.splice(from,1); n.splice(to,0,item); return n; });
   };
   const setName = (i, value) => setRows(prev => prev.map((r,idx) => idx===i ? {...r, name:value} : r));
-  const addDrawer = () => { if (rows.length < (meta?.maxD || 30)) setRows(prev => [...prev, { orig: -1, name: '' }]); };
+  const addDrawer = () => { if (rows.length < (meta?.maxD || 999)) setRows(prev => [...prev, { orig: -1, name: '' }]); };
   const removeDrawer = (i) => { if (rows.length > (meta?.minD || 1)) setRows(prev => prev.filter((_,idx) => idx !== i)); };
 
   const submit = () => onSave(container.id, rows.map(r => r.name.trim()), rows.map(r => r.orig), rows.length);
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Editar secciones" icon="settings-2" subtitle={container.name}
+    <ModalShell open={open} onClose={onClose} onSubmit={submit} title="Editar secciones" icon="settings-2" subtitle={container.name}
       footer={<>
         <button onClick={onClose} className={`flex-1 ${btnGhost}`}>Cancelar</button>
         <button onClick={submit} className={`flex-1 ${btnPrimary}`}>Guardar cambios</button>
@@ -52,7 +52,7 @@ export function DrawerEditorModal({ open, container, toolCounts, onClose, onSave
             </button>
           </div>
         ))}
-        <button onClick={addDrawer} disabled={rows.length >= (meta?.maxD || 30)}
+        <button onClick={addDrawer} disabled={rows.length >= (meta?.maxD || 999)}
           className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-steel-200 bg-steel-50/50 py-3 text-sm font-semibold text-steel-600 transition hover:border-steel-300 hover:bg-steel-100 disabled:opacity-35">
           <Icon name="plus" size={16}/> Agregar {meta?.drawerLabel?.toLowerCase() || 'seccion'}
         </button>

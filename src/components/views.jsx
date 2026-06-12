@@ -21,7 +21,7 @@ function Drawer({ label, count, missing, accent, onClick }) {
   );
 }
 
-export function StorageContainer({ container, tools, onOpen }) {
+export function StorageContainer({ container, tools, onOpen, onEditFurniture, onEditDrawers }) {
   const meta = CONTAINER_META[container.type];
   const drawerData = useMemo(() => Array.from({ length: container.drawers }).map((_, i) => {
     const inD = tools.filter(t => t.container === container.id && t.drawer === i);
@@ -41,10 +41,20 @@ export function StorageContainer({ container, tools, onOpen }) {
             <p className="text-xs text-ink-mute">{meta.label} · {container.drawers} {container.drawers===1?'seccion':'secciones'}</p>
           </div>
         </div>
-        {totalMissing > 0
-          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700"><Icon name="alert-triangle" size={13}/> {totalMissing} fuera</span>
-          : <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2.5 py-1 text-xs font-semibold text-sage-600"><Icon name="check" size={13}/> Todo en sitio</span>
-        }
+        <div className="flex items-center gap-1.5">
+          {totalMissing > 0
+            ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700"><Icon name="alert-triangle" size={13}/> {totalMissing} fuera</span>
+            : <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2.5 py-1 text-xs font-semibold text-sage-600"><Icon name="check" size={13}/> Todo en sitio</span>
+          }
+          {onEditFurniture && (
+            <button onClick={() => onEditFurniture(container)} title="Editar mueble (nombre, tipo)"
+              className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-steel-50 hover:text-steel-700"><Icon name="pencil" size={15}/></button>
+          )}
+          {onEditDrawers && (
+            <button onClick={() => onEditDrawers(container)} title="Editar secciones (nombres y cantidad)"
+              className="grid h-8 w-8 place-items-center rounded-lg text-ink-mute transition hover:bg-steel-50 hover:text-steel-700"><Icon name="settings-2" size={15}/></button>
+          )}
+        </div>
       </div>
       <div className="rounded-2xl border-2 border-steel-200 bg-gradient-to-b from-steel-50 to-white p-3">
         <div className="rounded-xl bg-steel-100/50 p-2.5">

@@ -22,6 +22,7 @@ export function CheckoutModal({ open, mode, tool, onClose, onConfirm, defaultPer
 
   return (
     <ModalShell open={open} onClose={onClose} maxW="max-w-md"
+      onSubmit={() => { if (max > 0 && (!isTake || person.trim())) submit(); }}
       title={isTake ? 'Retirar herramienta' : 'Devolver / Ingresar'}
       icon={isTake ? 'log-out' : 'log-in'} subtitle={tool.name}
       footer={<>

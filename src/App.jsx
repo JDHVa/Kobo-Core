@@ -12,6 +12,7 @@ import { HistoryView } from './features/HistoryView';
 import { ReorderPanel } from './features/ReorderPanel';
 import { KitsView } from './features/KitsView';
 import { CycleCountView } from './features/CycleCountView';
+import { WishlistView } from './features/WishlistView';
 import { TableView } from './features/TableView';
 import { QrSheet } from './features/QrSheet';
 import { AuthGate } from './features/AuthGate';
@@ -28,6 +29,7 @@ const TABS = [
   { key:'tabla',    label:'Tabla',        icon:'table' },
   { key:'historia', label:'Trazabilidad', icon:'history' },
   { key:'reponer',  label:'Reponer',      icon:'shopping-cart' },
+  { key:'deseos',   label:'A futuro',     icon:'sparkles' },
   { key:'kits',     label:'Kits',         icon:'boxes' },
   { key:'auditoria',label:'Auditoría',    icon:'clipboard-check' },
   { key:'qr',       label:'QR',           icon:'qr-code' },
@@ -35,7 +37,7 @@ const TABS = [
 
 export default function App() {
   const inv = useInventory();
-  const { containers, tools: allTools, customIcons = [], transactions = [], kits = [] } = inv.state;
+  const { containers, tools: allTools, customIcons = [], transactions = [], kits = [], wishlist = [] } = inv.state;
   // Solo herramientas activas (las soft-deleted van a la papelera)
   const tools = useMemo(() => allTools.filter(t => !t.deletedAt), [allTools]);
   const deletedTools = useMemo(() => allTools.filter(t => t.deletedAt), [allTools]);
@@ -89,6 +91,9 @@ export default function App() {
   // Acciones reservadas al admin (el servidor lo refuerza con RLS)
   const requireAdmin = (fn) => (...args) =>
     inv.isAdmin ? fn(...args) : fireToast('Solo un admin del taller puede hacer esto', 'take');
+  // Visitante: solo lectura (el servidor lo refuerza con RLS)
+  const requireEdit = (fn) => (...args) =>
+    !inv.isVisitor ? fn(...args) : fireToast('Modo visitante: solo puedes ver el taller', 'take');
 
   const openLoans = useMemo(() => computeOpenLoans(transactions), [transactions]);
   const lowStockCount = useMemo(() => tools.filter(belowMin).length, [tools]);
@@ -155,6 +160,7 @@ export default function App() {
             customIcons: Array.isArray(data.customIcons) ? data.customIcons : [],
             transactions: Array.isArray(data.transactions) ? data.transactions : [],
             kits: Array.isArray(data.kits) ? data.kits : [],
+            wishlist: Array.isArray(data.wishlist) ? data.wishlist : [],
           });
           fireToast('Inventario importado correctamente', 'info');
         } else fireToast('Archivo invalido', 'take');
@@ -207,7 +213,9 @@ export default function App() {
   const containerName = (id) => containers.find(c => c.id === id)?.name || '—';
   const drawerNameOf = (t) => { const c = containers.find(c => c.id === t.container); return c ? getDrawerLabel(c, t.drawer) : ''; };
 
-  const editTool = (tool) => { setEditing(tool); setModalOpen(true); };
+  const editTool = requireEdit((tool) => { setEditing(tool); setModalOpen(true); });
+  const openCheckout = requireEdit((tool, mode) => setCheckout({ tool, mode }));
+  const setToolStatus = requireEdit(inv.setToolStatus);
 
   return (
     <AuthGate session={inv.session} authReady={inv.authReady}>
@@ -240,10 +248,12 @@ export default function App() {
               </button>
               <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={importData}/>
             </div>
-            <button onClick={() => { setEditing(null); setModalOpen(true); }}
-              className="flex items-center gap-2 rounded-xl bg-steel-800 px-3.5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-steel-900 active:scale-95">
-              <Icon name="plus" size={18}/> <span className="hidden sm:inline">Nueva herramienta</span><span className="sm:hidden">Nueva</span>
-            </button>
+            {!inv.isVisitor && (
+              <button onClick={() => { setEditing(null); setModalOpen(true); }}
+                className="flex items-center gap-2 rounded-xl bg-steel-800 px-3.5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-steel-900 active:scale-95">
+                <Icon name="plus" size={18}/> <span className="hidden sm:inline">Nueva herramienta</span><span className="sm:hidden">Nueva</span>
+              </button>
+            )}
             {sb && inv.session && (
               <button onClick={() => setTeamOpen(true)} title="Equipo del taller"
                 className="grid h-9 w-9 place-items-center rounded-xl border border-steel-200 bg-white text-ink-mute shadow-soft transition hover:bg-steel-50 hover:text-steel-700">
@@ -307,7 +317,7 @@ export default function App() {
                       {searchResults.map(t => (
                         <div key={t.id}>
                           <p className="mb-1.5 flex items-center gap-1 px-1 text-xs text-ink-mute"><Icon name="map-pin" size={12}/> {containerName(t.container)} · {drawerNameOf(t)}</p>
-                          <ToolCard tool={t} loans={loansByTool(openLoans, t.id)} onCheckout={(tool, mode) => setCheckout({ tool, mode })} onEdit={editTool} onDelete={requireAdmin(setConfirm)} onSetStatus={inv.setToolStatus}/>
+                          <ToolCard tool={t} loans={loansByTool(openLoans, t.id)} onCheckout={openCheckout} onEdit={editTool} onDelete={requireAdmin(setConfirm)} onSetStatus={setToolStatus}/>
                         </div>
                       ))}
                     </div>
@@ -332,6 +342,7 @@ export default function App() {
                       {showMap && (
                         <InteractiveMap
                           containers={containers} tools={tools} editMode={mapEditMode}
+                          entrance={inv.entrance} onCommitEntrance={inv.saveEntrance}
                           onUpdateContainer={inv.updateContainer}
                           onCommitContainer={inv.commitContainer}
                           onDeleteContainer={handleDeleteContainer}
@@ -343,7 +354,11 @@ export default function App() {
                     </div>
                     <h2 className="mb-3 font-display text-lg font-semibold text-ink">Contenedores de almacenamiento</h2>
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                      {containers.map(c => <StorageContainer key={c.id} container={c} tools={tools} onOpen={openDrawer}/>)}
+                      {containers.map(c => (
+                        <StorageContainer key={c.id} container={c} tools={tools} onOpen={openDrawer}
+                          onEditFurniture={inv.isAdmin ? (cont => setFurnitureModal({ open:true, editing:cont })) : null}
+                          onEditDrawers={inv.isAdmin ? (cont => setDrawerEditor(cont)) : null}/>
+                      ))}
                     </div>
                   </>
                 )}
@@ -355,9 +370,9 @@ export default function App() {
                 {view === 'drawer' && activeContainer && (
                   <DrawerView container={activeContainer} drawerIndex={activeDrawer} tools={drawerTools} openLoans={openLoans}
                     trail={trail} onJump={jumpTo} onChangeDrawer={setActiveDrawer}
-                    onCheckout={(tool, mode) => setCheckout({ tool, mode })}
-                    onEdit={editTool} onDelete={requireAdmin(setConfirm)} onSetStatus={inv.setToolStatus}
-                    onAddHere={() => { setEditing(null); setModalOpen(true); }}
+                    onCheckout={openCheckout}
+                    onEdit={editTool} onDelete={requireAdmin(setConfirm)} onSetStatus={setToolStatus}
+                    onAddHere={requireEdit(() => { setEditing(null); setModalOpen(true); })}
                     onBack={() => setView('container')}/>
                 )}
               </>
@@ -367,13 +382,16 @@ export default function App() {
 
         {tab === 'tabla' && <TableView tools={tools} containers={containers} onEdit={editTool}
           deletedTools={deletedTools}
-          onRestore={t => { inv.restoreTool(t); fireToast('Herramienta restaurada', 'add'); }}
+          onRestore={requireEdit(t => { inv.restoreTool(t); fireToast('Herramienta restaurada', 'add'); })}
           onPurge={requireAdmin(t => { inv.purgeTool(t); fireToast('Eliminada definitivamente', 'info'); })}/>}
-        {tab === 'historia' && <HistoryView transactions={transactions}/>}
+        {tab === 'historia' && <HistoryView transactions={transactions} tools={allTools} containers={containers}/>}
         {tab === 'reponer' && <ReorderPanel tools={tools} containerName={containerName}/>}
-        {tab === 'kits' && <KitsView kits={kits} tools={tools} onSaveKit={k => { inv.saveKit(k); fireToast('Kit guardado', 'info'); }} onDeleteKit={requireAdmin(id => { inv.deleteKit(id); fireToast('Kit eliminado', 'info'); })}/>}
+        {tab === 'deseos' && <WishlistView wishlist={wishlist} canEdit={!inv.isVisitor} isAdmin={inv.isAdmin}
+          onSave={w => { inv.saveWish(w); fireToast('Material guardado', 'info'); }}
+          onDelete={id => { inv.deleteWish(id); fireToast('Material quitado de la lista', 'info'); }}/>}
+        {tab === 'kits' && <KitsView kits={kits} tools={tools} onSaveKit={requireEdit(k => { inv.saveKit(k); fireToast('Kit guardado', 'info'); })} onDeleteKit={requireAdmin(id => { inv.deleteKit(id); fireToast('Kit eliminado', 'info'); })}/>}
         {tab === 'auditoria' && <CycleCountView containers={containers} tools={tools} transactions={transactions}
-          onApplyCount={inv.applyCount} onRecordAudit={inv.recordAudit} auditor={defaultPerson}/>}
+          onApplyCount={requireEdit(inv.applyCount)} onRecordAudit={requireEdit(inv.recordAudit)} auditor={defaultPerson}/>}
         {tab === 'qr' && <QrSheet tools={tools} containers={containers}/>}
       </main>
 
@@ -402,7 +420,7 @@ export default function App() {
         <Icon name={chatOpen ? 'x' : 'bot'} size={24}/>
       </button>
       <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} containers={containers} tools={tools} transactions={transactions}
-        onMovement={handleCheckoutConfirm} defaultPerson={defaultPerson}/>
+        onMovement={requireEdit(handleCheckoutConfirm)} defaultPerson={defaultPerson}/>
 
       <Toast toast={toast}/>
     </div>

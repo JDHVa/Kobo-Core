@@ -1,12 +1,64 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Icon } from './ui';
-import { CONTAINER_META, FURNITURE_COLORS } from '../constants';
+import { CONTAINER_META, FURNITURE_COLORS, DEFAULT_ENTRANCE } from '../constants';
 import { snap, clamp } from '../lib/utils';
 
-export function InteractiveMap({ containers, tools, editMode, onUpdateContainer, onCommitContainer, onDeleteContainer, onSelect, onAddFurniture, onEditFurniture }) {
+// Qué etiquetas mostrar sobre el mapa (preferencia por dispositivo)
+const MAP_VIS_KEY = 'taller_mapa_visibilidad';
+const DEFAULT_VIS = { names:true, counts:true, badges:true };
+const VIS_OPTIONS = [
+  { key:'names',  label:'Nombres de muebles' },
+  { key:'counts', label:'Contador de herramientas' },
+  { key:'badges', label:'Alertas de items fuera' },
+];
+const loadVis = () => {
+  try { return { ...DEFAULT_VIS, ...JSON.parse(localStorage.getItem(MAP_VIS_KEY)) }; }
+  catch { return DEFAULT_VIS; }
+};
+
+// Puerta de acceso al taller: vive en cualquiera de las 4 paredes y en
+// modo edición se arrastra (se pega a la pared más cercana).
+function Entrance({ entrance, editMode, dragging, onPointerDown }) {
+  const { wall = 'bottom', offset = 440, size = 120 } = entrance || {};
+  const horizontal = wall === 'top' || wall === 'bottom';
+  // hueco en la pared + arco de apertura hacia adentro + etiqueta
+  const gap = horizontal
+    ? { x: offset, y: wall === 'top' ? 16 : 576, w: size, h: 8 }
+    : { x: wall === 'left' ? 16 : 976, y: offset, w: 8, h: size };
+  const arc = horizontal
+    ? (wall === 'top'
+        ? `M${offset} 24 A${size} ${size} 0 0 0 ${offset + size} 24`
+        : `M${offset} 576 A${size} ${size} 0 0 1 ${offset + size} 576`)
+    : (wall === 'left'
+        ? `M24 ${offset} A${size} ${size} 0 0 1 24 ${offset + size}`
+        : `M976 ${offset} A${size} ${size} 0 0 0 976 ${offset + size}`);
+  const label = horizontal
+    ? { x: offset + size/2, y: wall === 'top' ? 14 : 596 }
+    : { x: wall === 'left' ? 10 : 990, y: offset + size/2 };
+  return (
+    <g onPointerDown={onPointerDown} style={{ cursor: editMode ? (dragging ? 'grabbing' : 'grab') : 'default' }}>
+      {editMode && <rect x={gap.x - 6} y={gap.y - 6} width={gap.w + 12} height={gap.h + 12} rx={4}
+        fill={dragging ? '#f59e0b22' : 'transparent'} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3"/>}
+      <rect {...{ x:gap.x, y:gap.y, width:gap.w, height:gap.h }} fill="#eef1f5"/>
+      <path d={arc} fill="none" stroke="#9db9d4" strokeWidth="2" strokeDasharray="4 4" style={{pointerEvents:'none'}}/>
+      <text x={label.x} y={label.y} textAnchor="middle" fontSize="12" fill="#71717a" style={{pointerEvents:'none'}}
+        transform={horizontal ? undefined : `rotate(${wall === 'left' ? -90 : 90} ${label.x} ${label.y})`}>Acceso</text>
+    </g>
+  );
+}
+
+export function InteractiveMap({ containers, tools, editMode, entrance = DEFAULT_ENTRANCE, onCommitEntrance, onUpdateContainer, onCommitContainer, onDeleteContainer, onSelect, onAddFurniture, onEditFurniture }) {
   const svgRef = useRef(null);
   const [drag, setDrag] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [entranceDrag, setEntranceDrag] = useState(null); // entrada en movimiento (estado local hasta soltar)
+  const [vis, setVis] = useState(loadVis);
+  const [visMenu, setVisMenu] = useState(false);
+  const toggleVis = (key) => setVis(v => {
+    const next = { ...v, [key]: !v[key] };
+    localStorage.setItem(MAP_VIS_KEY, JSON.stringify(next));
+    return next;
+  });
 
   const stats = useMemo(() => {
     const m = {};
@@ -35,7 +87,23 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
     setDrag({ id:cId, action, startX:pt.x, startY:pt.y, origX:c.x, origY:c.y, origW:c.w, origH:c.h });
   }, [editMode, containers, toSvg]);
 
+  // Arrastre de la entrada: se pega a la pared más cercana del perímetro
+  const handleEntranceMove = useCallback((e) => {
+    const pt = toSvg(e.clientX, e.clientY);
+    const size = entrance.size || 120;
+    // distancia a cada pared del recinto (20..980 x 20..580)
+    const walls = [
+      { wall:'top',    d: Math.abs(pt.y - 20),  offset: clamp(pt.x - size/2, 20, 980 - size) },
+      { wall:'bottom', d: Math.abs(pt.y - 580), offset: clamp(pt.x - size/2, 20, 980 - size) },
+      { wall:'left',   d: Math.abs(pt.x - 20),  offset: clamp(pt.y - size/2, 20, 580 - size) },
+      { wall:'right',  d: Math.abs(pt.x - 980), offset: clamp(pt.y - size/2, 20, 580 - size) },
+    ];
+    const best = walls.reduce((a, b) => (b.d < a.d ? b : a));
+    setEntranceDrag({ wall: best.wall, offset: snap(best.offset), size });
+  }, [entrance.size, toSvg]);
+
   const handlePointerMove = useCallback((e) => {
+    if (entranceDrag) return handleEntranceMove(e);
     if (!drag) return;
     const pt = toSvg(e.clientX, e.clientY);
     const dx = pt.x - drag.startX, dy = pt.y - drag.startY;
@@ -56,15 +124,19 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
       upd = { x: snap(drag.origX + drag.origW - newW), y: snap(drag.origY + drag.origH - newH), w: newW, h: newH };
     }
     onUpdateContainer(drag.id, upd);
-  }, [drag, toSvg, onUpdateContainer]);
+  }, [drag, entranceDrag, handleEntranceMove, toSvg, onUpdateContainer]);
 
   const handlePointerUp = useCallback(() => {
+    if (entranceDrag) {
+      onCommitEntrance?.(entranceDrag);
+      setEntranceDrag(null);
+    }
     if (drag && onCommitContainer) {
       const c = containers.find(c => c.id === drag.id);
       if (c) onCommitContainer(c);
     }
     setDrag(null);
-  }, [drag, containers, onCommitContainer]);
+  }, [drag, entranceDrag, onCommitEntrance, containers, onCommitContainer]);
 
   const handleClick = useCallback((e, c) => {
     if (editMode) { setSelectedId(c.id); return; }
@@ -176,10 +248,32 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-steel-100 text-steel-700"><Icon name="map" size={22}/></span>
           <div>
             <h3 className="font-display text-xl font-semibold text-ink">Mapa del Taller</h3>
-            <p className="text-xs text-ink-mute">{editMode ? 'Modo edicion: arrastra y redimensiona muebles' : 'Toca un mueble para abrirlo'}</p>
+            <p className="text-xs text-ink-mute">{editMode ? 'Modo edicion: arrastra muebles y la entrada (Acceso)' : 'Toca un mueble para abrirlo'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative">
+            <button onClick={() => setVisMenu(v => !v)} title="Elegir qué etiquetas mostrar en el mapa"
+              className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-sm font-semibold shadow-soft transition active:scale-95 ${Object.values(vis).every(Boolean) ? 'border-steel-200 bg-white text-steel-600 hover:bg-steel-50' : 'border-steel-300 bg-steel-100 text-steel-700'}`}>
+              <Icon name="eye" size={15}/> <span className="hidden lg:inline">Ver</span> <Icon name="chevron-down" size={12}/>
+            </button>
+            {visMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setVisMenu(false)}/>
+                <div className="absolute right-0 top-11 z-20 w-60 rounded-xl border border-steel-200 bg-white p-1.5 shadow-lift">
+                  {VIS_OPTIONS.map(o => (
+                    <button key={o.key} onClick={() => toggleVis(o.key)}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-ink-soft transition hover:bg-steel-50">
+                      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition ${vis[o.key] ? 'border-steel-600 bg-steel-600 text-white' : 'border-steel-300 bg-white'}`}>
+                        {vis[o.key] && <Icon name="check" size={13}/>}
+                      </span>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {editMode && (
             <>
               <button onClick={onAddFurniture} className="flex items-center gap-1.5 rounded-xl bg-sage-500 px-3 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-sage-600 active:scale-95">
@@ -220,10 +314,9 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
 
           <rect x="20" y="20" width="960" height="560" fill="url(#grid)" />
           <rect x="20" y="20" width="960" height="560" fill="none" stroke="#345b82" strokeWidth="4" rx="6" />
-          <rect x="440" y="576" width="120" height="8" fill="#eef1f5" />
-          <path d="M440 576 A120 120 0 0 1 560 576" fill="none" stroke="#9db9d4" strokeWidth="2" strokeDasharray="4 4" />
-          <text x="500" y="596" textAnchor="middle" fontSize="12" fill="#71717a">Acceso</text>
           <rect x="20" y="20" width="960" height="560" fill="transparent" onClick={() => editMode && setSelectedId(null)} />
+          <Entrance entrance={entranceDrag || entrance} editMode={editMode} dragging={!!entranceDrag}
+            onPointerDown={e => { if (!editMode) return; e.preventDefault(); e.stopPropagation(); setEntranceDrag(entranceDrag || entrance); }}/>
 
           {sorted.map(c => {
             const meta = CONTAINER_META[c.type];
@@ -241,9 +334,9 @@ export function InteractiveMap({ containers, tools, editMode, onUpdateContainer,
                   {renderShape(c, colors)}
                   {renderDecoration(c, colors)}
                 </g>
-                <text x={c.x + c.w/2} y={c.y - 8} textAnchor="middle" fontSize={13} fontWeight={600} fill="#27272a" style={{pointerEvents:'none'}}>{c.name}</text>
-                <text x={c.x + c.w/2} y={c.y + c.h + 18} textAnchor="middle" fontSize={11} fill="#71717a" style={{pointerEvents:'none'}}>{st.count} herr.</text>
-                {st.missing > 0 && (
+                {vis.names && <text x={c.x + c.w/2} y={c.y - 8} textAnchor="middle" fontSize={13} fontWeight={600} fill="#27272a" style={{pointerEvents:'none'}}>{c.name}</text>}
+                {vis.counts && <text x={c.x + c.w/2} y={c.y + c.h + 18} textAnchor="middle" fontSize={11} fill="#71717a" style={{pointerEvents:'none'}}>{st.count} herr.</text>}
+                {vis.badges && st.missing > 0 && (
                   <g style={{pointerEvents:'none'}}>
                     <circle cx={c.x + c.w - 10} cy={c.y + 10} r={11} fill="#f59e0b"/>
                     <text x={c.x + c.w - 10} y={c.y + 14.5} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff">{st.missing}</text>

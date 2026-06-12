@@ -8,16 +8,22 @@ export const TOOL_STATUS = {
   perdida:      { label:'Perdida',           icon:'help-circle',    tone:'clay'  },
 };
 
+// Sin límite superior de secciones (maxD alto en vez de Infinity para
+// que clamp() y los steppers sigan funcionando con números normales)
+export const MAX_DRAWERS = 999;
 export const CONTAINER_META = {
-  gabinete:     { label:'Gabinete',              drawerLabel:'Cajon',          icon:'archive',      accent:'steel', defaultDrawers:4, minD:1, maxD:12 },
-  multiple:     { label:'Mueble Multiple',       drawerLabel:'Cajon',          icon:'layout-grid',  accent:'sage',  defaultDrawers:3, minD:1, maxD:10 },
-  caja:         { label:'Caja de Herramientas',  drawerLabel:'Compartimento',  icon:'briefcase',    accent:'clay',  defaultDrawers:1, minD:1, maxD:6 },
-  mesa:         { label:'Mesa de Trabajo',       drawerLabel:'Superficie',     icon:'square',       accent:'wood',  defaultDrawers:1, minD:1, maxD:4 },
-  estante:      { label:'Estante',               drawerLabel:'Nivel',          icon:'layers',       accent:'steel', defaultDrawers:4, minD:1, maxD:10 },
-  repisa:       { label:'Repisa',                drawerLabel:'Nivel',          icon:'minus',        accent:'wood',  defaultDrawers:1, minD:1, maxD:4 },
-  organizador:  { label:'Organizador de Cajitas',drawerLabel:'Cajita',         icon:'grid-3x3',     accent:'clay',  defaultDrawers:8, minD:2, maxD:30 },
-  personalizado:{ label:'Personalizado',         drawerLabel:'Seccion',        icon:'pen-tool',     accent:'steel', defaultDrawers:1, minD:0, maxD:30 },
+  gabinete:     { label:'Gabinete',              drawerLabel:'Cajon',          icon:'archive',      accent:'steel', defaultDrawers:4, minD:1, maxD:MAX_DRAWERS },
+  multiple:     { label:'Mueble Multiple',       drawerLabel:'Cajon',          icon:'layout-grid',  accent:'sage',  defaultDrawers:3, minD:1, maxD:MAX_DRAWERS },
+  caja:         { label:'Caja de Herramientas',  drawerLabel:'Compartimento',  icon:'briefcase',    accent:'clay',  defaultDrawers:1, minD:1, maxD:MAX_DRAWERS },
+  mesa:         { label:'Mesa de Trabajo',       drawerLabel:'Superficie',     icon:'square',       accent:'wood',  defaultDrawers:1, minD:1, maxD:MAX_DRAWERS },
+  estante:      { label:'Estante',               drawerLabel:'Nivel',          icon:'layers',       accent:'steel', defaultDrawers:4, minD:1, maxD:MAX_DRAWERS },
+  repisa:       { label:'Repisa',                drawerLabel:'Nivel',          icon:'minus',        accent:'wood',  defaultDrawers:1, minD:1, maxD:MAX_DRAWERS },
+  organizador:  { label:'Organizador de Cajitas',drawerLabel:'Cajita',         icon:'grid-3x3',     accent:'clay',  defaultDrawers:8, minD:2, maxD:MAX_DRAWERS },
+  personalizado:{ label:'Personalizado',         drawerLabel:'Seccion',        icon:'pen-tool',     accent:'steel', defaultDrawers:1, minD:0, maxD:MAX_DRAWERS },
 };
+
+// Entrada del taller por defecto (la posición histórica fija)
+export const DEFAULT_ENTRANCE = { wall:'bottom', offset:440, size:120 };
 
 export const CUSTOM_SHAPES = [
   { key:'rect',     label:'Rectangulo', preview:'M2 4h20v16H2z' },
